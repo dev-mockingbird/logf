@@ -1,4 +1,4 @@
-module github.com/dev-mockingbird/logger
+module github.com/dev-mockingbird/logf
 
 go 1.20
 
