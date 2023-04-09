@@ -3,6 +3,7 @@ package logf
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 type Level uint8
@@ -40,18 +41,36 @@ func (logf Logf) Logf(level Level, format string, v ...interface{}) {
 }
 
 type logger struct {
-	underling *log.Logger
+	underlying *log.Logger
+	logLevel   Level
 }
 
-func New(loggers ...*log.Logger) Logfer {
-	if len(loggers) > 0 {
-		return logger{underling: loggers[0]}
+type Option func(*logger)
+
+func LogLevel(logLevel Level) Option {
+	return func(opt *logger) {
+		opt.logLevel = logLevel
 	}
-	return logger{underling: log.Default()}
+}
+
+func Underlying(underlying *log.Logger) Option {
+	return func(opt *logger) {
+		opt.underlying = underlying
+	}
+}
+
+func New(opts ...Option) Logfer {
+	logger := &logger{underlying: log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile), logLevel: Trace}
+	for _, apply := range opts {
+		apply(logger)
+	}
+	return logger
 }
 
 func (l logger) Logf(level Level, format string, v ...any) {
-	l.underling.Printf("%s  %s", LevelString(level), fmt.Sprintf(format, v...))
+	if level >= l.logLevel {
+		l.underlying.Printf("[%s] %s", LevelString(level), fmt.Sprintf(format, v...))
+	}
 }
 
 func LevelString(level Level) string {
