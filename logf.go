@@ -69,7 +69,7 @@ func New(opts ...Option) Logfer {
 
 func (l logger) Logf(level Level, format string, v ...any) {
 	if level >= l.logLevel {
-		l.underlying.Printf("[%s] %s", LevelString(level), fmt.Sprintf(format, v...))
+		l.underlying.Output(2, fmt.Sprintf("[%s] %s", LevelString(level), fmt.Sprintf(format, v...)))
 	}
 }
 
