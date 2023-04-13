@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 type Level uint8
@@ -30,6 +31,15 @@ func init() {
 	}
 }
 
+type Prefixable interface {
+	Prefix(string) Logger
+}
+
+type Logger interface {
+	Prefixable
+	Logfer
+}
+
 type Logfer interface {
 	Logf(level Level, format string, v ...interface{})
 }
@@ -42,6 +52,7 @@ func (logf Logf) Logf(level Level, format string, v ...interface{}) {
 
 type logger struct {
 	underlying *log.Logger
+	prefixes   []string
 	logLevel   Level
 }
 
@@ -53,24 +64,36 @@ func LogLevel(logLevel Level) Option {
 	}
 }
 
+func Prefix(prefix string) Option {
+	return func(opt *logger) {
+		opt.prefixes = append(opt.prefixes, prefix)
+	}
+}
+
 func Underlying(underlying *log.Logger) Option {
 	return func(opt *logger) {
 		opt.underlying = underlying
 	}
 }
 
-func New(opts ...Option) Logfer {
-	logger := &logger{underlying: log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile), logLevel: Trace}
+func New(opts ...Option) Logger {
+	logger := &logger{logLevel: Trace}
 	for _, apply := range opts {
 		apply(logger)
 	}
+	logger.underlying = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	return logger
 }
 
 func (l logger) Logf(level Level, format string, v ...any) {
 	if level >= l.logLevel {
-		l.underlying.Output(2, fmt.Sprintf("[%s] %s", LevelString(level), fmt.Sprintf(format, v...)))
+		l.underlying.Output(2, fmt.Sprintf("[%s] %s%s", LevelString(level), strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...)))
 	}
+}
+
+func (l *logger) Prefix(prefix string) Logger {
+	l.prefixes = append(l.prefixes, prefix)
+	return l
 }
 
 func LevelString(level Level) string {
