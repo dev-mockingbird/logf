@@ -77,7 +77,7 @@ func Underlying(underlying *log.Logger) Option {
 }
 
 func New(opts ...Option) Logger {
-	logger := &logger{logLevel: Trace}
+	logger := &logger{logLevel: Info}
 	for _, apply := range opts {
 		apply(logger)
 	}
