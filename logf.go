@@ -92,8 +92,9 @@ func (l logger) Logf(level Level, format string, v ...any) {
 }
 
 func (l *logger) Prefix(prefix string) Logger {
-	l.prefixes = append(l.prefixes, prefix)
-	return l
+	ret := *l
+	ret.prefixes = append(l.prefixes, prefix)
+	return &ret
 }
 
 func LevelString(level Level) string {
