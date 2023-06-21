@@ -103,10 +103,10 @@ func (l logger) Logf(level Level, format string, v ...any) {
 	ls := LevelString(level)
 	msg := fmt.Sprintf("\t[%s]\t%s%s", ls, strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...))
 	l.underlying.Output(2, l.colorMsg(level, msg))
-	if level >= Error {
+	if level >= Warn {
 		stack := debug.Stack()
 		stacks := bytes.Split(stack, []byte{'\n'})[5:]
-		l.underlying.Writer().Write(bytes.Join(stacks, []byte{'\n'}))
+		l.underlying.Output(2, l.colorMsg(level, string(bytes.Join(stacks, []byte{'\n'}))))
 	}
 }
 
