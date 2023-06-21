@@ -1,10 +1,14 @@
 package logf
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 type Level uint8
@@ -51,9 +55,10 @@ func (logf Logf) Logf(level Level, format string, v ...interface{}) {
 }
 
 type logger struct {
-	underlying *log.Logger
-	prefixes   []string
-	logLevel   Level
+	underlying   *log.Logger
+	disableColor bool
+	prefixes     []string
+	logLevel     Level
 }
 
 type Option func(*logger)
@@ -61,6 +66,12 @@ type Option func(*logger)
 func LogLevel(logLevel Level) Option {
 	return func(opt *logger) {
 		opt.logLevel = logLevel
+	}
+}
+
+func DesiableColor() Option {
+	return func(l *logger) {
+		l.disableColor = true
 	}
 }
 
@@ -86,9 +97,38 @@ func New(opts ...Option) Logger {
 }
 
 func (l logger) Logf(level Level, format string, v ...any) {
-	if level >= l.logLevel {
-		l.underlying.Output(2, fmt.Sprintf("[%s] %s%s", LevelString(level), strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...)))
+	if level < l.logLevel {
+		return
 	}
+	ls := LevelString(level)
+	msg := fmt.Sprintf("\t[%s]\t%s%s", ls, strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...))
+	l.underlying.Output(2, l.colorMsg(level, msg))
+	if level >= Error {
+		stack := debug.Stack()
+		stacks := bytes.Split(stack, []byte{'\n'})[5:]
+		l.underlying.Writer().Write(bytes.Join(stacks, []byte{'\n'}))
+	}
+}
+
+func (l logger) colorMsg(level Level, msg string) string {
+	if l.disableColor {
+		return msg
+	}
+	switch level {
+	case Trace:
+		return color.WhiteString(msg)
+	case Debug:
+		return color.CyanString(msg)
+	case Info:
+		return color.GreenString(msg)
+	case Warn:
+		return color.YellowString(msg)
+	case Error:
+		return color.RedString(msg)
+	case Fatal:
+		return color.BlueString(msg)
+	}
+	return msg
 }
 
 func (l *logger) Prefix(prefix string) Logger {
