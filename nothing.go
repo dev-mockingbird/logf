@@ -11,5 +11,5 @@ func (n *nothing) Prefix(string) Logger {
 }
 
 func (n *nothing) Logf(Level, string, ...any) {
-
+	return
 }
