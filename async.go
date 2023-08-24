@@ -94,12 +94,19 @@ func Async(opts ...AsyncLoggerOption) AsyncLogger {
 }
 
 func (a *asyncLogger) Prefix(prefix string) Logger {
-	return &asyncLogger{
-		printer: a.printer,
-		q:       make(chan AsyncLogRecord, a.ql),
-		ql:      a.ql,
-		stopCh:  make(chan struct{}),
+	ret := &asyncLogger{
+		printer:  a.printer,
+		prefix:   a.prefix + prefix,
+		logLevel: a.logLevel,
+		q:        make(chan AsyncLogRecord, a.ql),
+		ql:       a.ql,
+		stopCh:   make(chan struct{}),
 	}
+	go func() {
+		ret.start()
+	}()
+	runtime.SetFinalizer(ret, (*asyncLogger).stop)
+	return ret
 }
 
 func (a *asyncLogger) Logf(l Level, format string, args ...any) {
