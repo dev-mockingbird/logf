@@ -3,6 +3,7 @@ package logf
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime/debug"
@@ -59,6 +60,7 @@ type logger struct {
 	disableColor bool
 	prefixes     []string
 	logLevel     Level
+	w            io.Writer
 }
 
 type Option func(*logger)
@@ -75,6 +77,13 @@ func DesiableColor() Option {
 	}
 }
 
+func Writer(w io.Writer) Option {
+	return func(l *logger) {
+		l.disableColor = true
+		l.w = w
+	}
+}
+
 func Prefix(prefix string) Option {
 	return func(opt *logger) {
 		opt.prefixes = append(opt.prefixes, prefix)
@@ -88,11 +97,11 @@ func Underlying(underlying *log.Logger) Option {
 }
 
 func New(opts ...Option) Logger {
-	logger := &logger{logLevel: Info}
+	logger := &logger{logLevel: Info, w: os.Stdout}
 	for _, apply := range opts {
 		apply(logger)
 	}
-	logger.underlying = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	logger.underlying = log.New(logger.w, "", log.LstdFlags|log.Lshortfile)
 	return logger
 }
 
