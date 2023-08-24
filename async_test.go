@@ -10,7 +10,7 @@ import (
 
 func TestAsyncLogger(t *testing.T) {
 	var buf bytes.Buffer
-	logger := logf.Async(logf.WithPrinter(logf.NewAsyncPrinter(&buf)))
+	logger := logf.Async(logf.AsyncPrinter(logf.NewAsyncPrinter(&buf)))
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)

@@ -22,7 +22,7 @@ type AsyncLogRecord struct {
 	Args      []any
 }
 
-type AsyncPrinter interface {
+type asyncLogPrinter interface {
 	Print(prefix string, record AsyncLogRecord)
 }
 
@@ -50,12 +50,13 @@ func (a asyncPrinter) Print(prefix string, record AsyncLogRecord) {
 }
 
 type asyncLogger struct {
-	printer AsyncPrinter
-	prefix  string
-	q       chan AsyncLogRecord
-	ql      int
-	wg      sync.WaitGroup
-	stopCh  chan struct{}
+	printer  asyncLogPrinter
+	prefix   string
+	q        chan AsyncLogRecord
+	ql       int
+	wg       sync.WaitGroup
+	logLevel Level
+	stopCh   chan struct{}
 }
 
 type AsyncLogger interface {
@@ -65,18 +66,25 @@ type AsyncLogger interface {
 
 type AsyncLoggerOption func(l *asyncLogger)
 
-func WithPrinter(p AsyncPrinter) AsyncLoggerOption {
+func AsyncPrinter(p asyncLogPrinter) AsyncLoggerOption {
 	return func(l *asyncLogger) {
 		l.printer = p
 	}
 }
 
+func AsyncLevel(l Level) AsyncLoggerOption {
+	return func(logger *asyncLogger) {
+		logger.logLevel = l
+	}
+}
+
 func Async(opts ...AsyncLoggerOption) AsyncLogger {
 	a := &asyncLogger{
-		printer: NewAsyncPrinter(os.Stdout),
-		q:       make(chan AsyncLogRecord, 100),
-		ql:      100,
-		stopCh:  make(chan struct{}),
+		logLevel: Info,
+		printer:  NewAsyncPrinter(os.Stdout),
+		q:        make(chan AsyncLogRecord, 100),
+		ql:       100,
+		stopCh:   make(chan struct{}),
 	}
 	go func() {
 		a.start()
