@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func _log(level Level, format string, args ...any) {
+	logger := New(LogLevel(Trace), WithCallerDepth(CallerDepth+1))
+	logger.Logf(level, format, args...)
+}
+
+func TestLogger_CallerDepth(t *testing.T) {
+	_log(Info, "hello world")
+	_log(Warn, "hello world")
+}
+
 func TestLogger(t *testing.T) {
 	logger := New(LogLevel(Trace))
 	logger.Logf(Trace, "hello world: %d", 1)

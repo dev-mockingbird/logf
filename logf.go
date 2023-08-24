@@ -23,6 +23,10 @@ const (
 	Fatal
 )
 
+const (
+	CallerDepth = 2
+)
+
 var levelString map[Level]string
 
 func init() {
@@ -60,6 +64,7 @@ type logger struct {
 	disableColor bool
 	prefixes     []string
 	logLevel     Level
+	callerDepth  int
 	w            io.Writer
 }
 
@@ -84,6 +89,12 @@ func Writer(w io.Writer) Option {
 	}
 }
 
+func WithCallerDepth(depth int) Option {
+	return func(l *logger) {
+		l.callerDepth = depth
+	}
+}
+
 func Prefix(prefix string) Option {
 	return func(opt *logger) {
 		opt.prefixes = append(opt.prefixes, prefix)
@@ -97,7 +108,7 @@ func Underlying(underlying *log.Logger) Option {
 }
 
 func New(opts ...Option) Logger {
-	logger := &logger{logLevel: Info, w: os.Stdout}
+	logger := &logger{logLevel: Info, w: os.Stdout, callerDepth: CallerDepth}
 	for _, apply := range opts {
 		apply(logger)
 	}
@@ -111,11 +122,11 @@ func (l logger) Logf(level Level, format string, v ...any) {
 	}
 	ls := LevelString(level)
 	msg := fmt.Sprintf("\t[%s]\t%s%s", ls, strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...))
-	l.underlying.Output(2, l.colorMsg(level, msg))
+	l.underlying.Output(l.callerDepth, l.colorMsg(level, msg))
 	if level >= Warn {
 		stack := debug.Stack()
-		stacks := bytes.Split(stack, []byte{'\n'})[5:]
-		l.underlying.Output(2, l.colorMsg(level, string(bytes.Join(stacks, []byte{'\n'}))))
+		stacks := bytes.Split(stack, []byte{'\n'})[3+l.callerDepth:]
+		l.underlying.Output(l.callerDepth, l.colorMsg(level, string(bytes.Join(stacks, []byte{'\n'}))))
 	}
 }
 
