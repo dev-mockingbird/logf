@@ -1,17 +1,5 @@
 package logf
 
-import (
-	"bytes"
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"runtime/debug"
-	"strings"
-
-	"github.com/fatih/color"
-)
-
 type Level uint8
 
 const (
@@ -60,101 +48,25 @@ func (logf Logf) Logf(level Level, format string, v ...interface{}) {
 }
 
 type logger struct {
-	underlying   *log.Logger
-	disableColor bool
-	prefixes     []string
-	logLevel     Level
-	callerDepth  int
-	w            io.Writer
-}
-
-type Option func(*logger)
-
-func LogLevel(logLevel Level) Option {
-	return func(opt *logger) {
-		opt.logLevel = logLevel
-	}
-}
-
-func DesiableColor() Option {
-	return func(l *logger) {
-		l.disableColor = true
-	}
-}
-
-func Writer(w io.Writer) Option {
-	return func(l *logger) {
-		l.disableColor = true
-		l.w = w
-	}
-}
-
-func WithCallerDepth(depth int) Option {
-	return func(l *logger) {
-		l.callerDepth = depth
-	}
-}
-
-func Prefix(prefix string) Option {
-	return func(opt *logger) {
-		opt.prefixes = append(opt.prefixes, prefix)
-	}
-}
-
-func Underlying(underlying *log.Logger) Option {
-	return func(opt *logger) {
-		opt.underlying = underlying
-	}
+	config *Config
 }
 
 func New(opts ...Option) Logger {
-	logger := &logger{logLevel: Info, w: os.Stdout, callerDepth: CallerDepth}
-	for _, apply := range opts {
-		apply(logger)
-	}
-	logger.underlying = log.New(logger.w, "", log.LstdFlags|log.Lshortfile)
-	return logger
+	return &logger{config: getConfig(opts...)}
 }
 
 func (l logger) Logf(level Level, format string, v ...any) {
-	if level < l.logLevel {
+	if level < l.config.LogLevel {
 		return
 	}
-	ls := LevelString(level)
-	msg := fmt.Sprintf("\t[%s]\t%s%s", ls, strings.Join(l.prefixes, ""), fmt.Sprintf(format, v...))
-	l.underlying.Output(l.callerDepth, l.colorMsg(level, msg))
-	if level >= Warn {
-		stack := debug.Stack()
-		stacks := bytes.Split(stack, []byte{'\n'})[3+l.callerDepth:]
-		l.underlying.Output(l.callerDepth, l.colorMsg(level, string(bytes.Join(stacks, []byte{'\n'}))))
-	}
-}
-
-func (l logger) colorMsg(level Level, msg string) string {
-	if l.disableColor {
-		return msg
-	}
-	switch level {
-	case Trace:
-		return color.WhiteString(msg)
-	case Debug:
-		return color.CyanString(msg)
-	case Info:
-		return color.GreenString(msg)
-	case Warn:
-		return color.YellowString(msg)
-	case Error:
-		return color.RedString(msg)
-	case Fatal:
-		return color.BlueString(msg)
-	}
-	return msg
+	record := CollectRecord(level, l.config.CallerDepth, format, v...)
+	l.config.Printer.Print(l.config.Prefix, record)
 }
 
 func (l *logger) Prefix(prefix string) Logger {
-	ret := *l
-	ret.prefixes = append(l.prefixes, prefix)
-	return &ret
+	return &logger{
+		config: l.config.WithPrefix(prefix),
+	}
 }
 
 func LevelString(level Level) string {

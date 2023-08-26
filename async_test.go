@@ -2,6 +2,7 @@ package logf_test
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 
 func TestAsyncLogger(t *testing.T) {
 	var buf bytes.Buffer
-	logger := logf.Async(logf.AsyncPrinter(logf.NewAsyncPrinter(&buf)))
+	logger := logf.Async(logf.Writer(&buf))
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -21,5 +22,6 @@ func TestAsyncLogger(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+	fmt.Print(buf.String())
 	logger.Wait()
 }

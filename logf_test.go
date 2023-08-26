@@ -7,7 +7,7 @@ import (
 )
 
 func _log(level Level, format string, args ...any) {
-	logger := New(LogLevel(Trace), WithCallerDepth(CallerDepth+1))
+	logger := New(LogLevel(Trace), Caller(CallerDepth+1))
 	logger.Logf(level, format, args...)
 }
 
