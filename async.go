@@ -78,14 +78,25 @@ func AsyncLevel(l Level) AsyncLoggerOption {
 	}
 }
 
-func Async(opts ...AsyncLoggerOption) AsyncLogger {
-	a := &asyncLogger{
-		logLevel: Info,
-		printer:  NewAsyncPrinter(os.Stdout),
-		q:        make(chan AsyncLogRecord, 100),
-		ql:       100,
-		stopCh:   make(chan struct{}),
+func AsyncBuffSize(s int) AsyncLoggerOption {
+	return func(logger *asyncLogger) {
+		logger.ql = s
 	}
+}
+
+func Async(opts ...AsyncLoggerOption) AsyncLogger {
+	a := &asyncLogger{logLevel: Info}
+	for _, apply := range opts {
+		apply(a)
+	}
+	if a.printer == nil {
+		a.printer = NewAsyncPrinter(os.Stdout)
+	}
+	if a.ql == 0 {
+		a.ql = 10
+	}
+	a.q = make(chan AsyncLogRecord, a.ql)
+	a.stopCh = make(chan struct{})
 	go func() {
 		a.start()
 	}()
