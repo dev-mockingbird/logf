@@ -7,6 +7,7 @@ import (
 
 type asyncLogger struct {
 	config *Config
+	lock   sync.Mutex
 	q      chan Record
 	wg     sync.WaitGroup
 	stopCh chan struct{}
@@ -56,7 +57,9 @@ func (a *asyncLogger) start() error {
 	for {
 		select {
 		case item := <-a.q:
+			a.lock.Lock()
 			a.config.Printer.Print(a.config.Prefix, item)
+			a.lock.Unlock()
 			a.wg.Done()
 		case <-a.stopCh:
 			close(a.q)
