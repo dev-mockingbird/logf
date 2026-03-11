@@ -28,16 +28,26 @@ func NewPrinter(w io.Writer) Printer {
 }
 
 func (a printer) Print(prefix string, record Record) {
-	a.print(prefix, record)
-	for _, msg := range record.Stack {
-		record.Format = string(msg)
+	if a.w == os.Stdout {
+		a.print(prefix, record)
+		for _, msg := range record.Stack {
+			record.Format = string(msg)
+			record.Args = nil
+			a.print(prefix, record)
+		}
+	} else {
+		msg := fmt.Sprintf(record.Format, record.Args...)
+		for _, s := range record.Stack {
+			msg += " " + string(s)
+		}
+		record.Format = msg
 		record.Args = nil
 		a.print(prefix, record)
 	}
 }
 
 func (a printer) print(prefix string, record Record) {
-	fmt.Fprintf(a.w, a.colorMsg(record.Level, fmt.Sprintf(
+	fmt.Fprintf(a.w, "%s", a.colorMsg(record.Level, fmt.Sprintf(
 		"%s %s:%d:\t[%s]\t%s%s\n",
 		record.CreatedAt.Format("2006/01/02 15:04:05"),
 		path.Base(record.PathFile),

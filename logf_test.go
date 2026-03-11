@@ -46,6 +46,30 @@ func TestLogger_LogToCustomWriter(t *testing.T) {
 	}
 }
 
+func TestLogger_MergeStackInOneLine(t *testing.T) {
+	var buf bytes.Buffer
+	// 使用高于 Warn 的级别以触发 Stack 收集
+	logger := New(LogLevel(Warn), Writer(&buf))
+	logger.Logf(Warn, "main message")
+
+	result := buf.String()
+	lines := strings.Split(strings.TrimSpace(result), "\n")
+
+	// 验证只有一行输出
+	if len(lines) != 1 {
+		t.Errorf("expected 1 line, got %d", len(lines))
+	}
+
+	// 验证包含了消息和堆栈的部分关键字（堆栈通常包含 testing 相关的路径）
+	if !strings.Contains(lines[0], "main message") {
+		t.Errorf("result should contain main message")
+	}
+	// 因为 CollectRecord 在 Warn 时会记录堆栈，所以 result 应该包含多余的信息
+	if !strings.Contains(lines[0], "logf_test.go") && !strings.Contains(lines[0], "testing") {
+		t.Errorf("result should contain stack information")
+	}
+}
+
 func TestLogger_Prefix(t *testing.T) {
 	logger := New(LogLevel(Info), Prefix("prefix xxxx: "))
 	logger.Logf(Trace, "hello world: %d", 1)
